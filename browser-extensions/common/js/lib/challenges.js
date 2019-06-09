@@ -127,6 +127,7 @@ function generate_running_challenge_data(data) {
       "data": 50,
       "help": "Run 50+ parkruns in one calendar year."}))
     challenge_highlow_countries(data, challenge_data)
+    challenge_hillclimber_countries(data, challenge_data)
   }
 
   if (data.parkrun_results && data.geo_data) {
@@ -2439,4 +2440,42 @@ function get_elevations() {
             console.log('  "' + event_name + '" : ' + new_elevations[event_name])
         })
     }
+}
+function challenge_hillclimber_countries(data, challenge_data) {
+    var hillclimber_countries = {
+        "Australia"  : { // http://blog.parkrun.com/au/2019/01/16/up-for-a-challenge/
+            185 : "Nambour",
+            170 : "Cormorant Bay",
+            164 : "Cleland",
+            151 : "Bunyaville",
+            130 : "Ocean View",
+            121 : "Wildflower",
+            109 : "Wilson Botanic",
+            103 : "Blackbutt",
+            89 : "Mt Clarence",
+            83 : "Ipswich"
+        }
+    }
+    
+    Object.keys(hillclimber_countries).sort().forEach(function (country_name) {
+        var elevations = Object.keys(hillclimber_countries[country_name]).sort(function (a, b) { return parseInt(b) - parseInt(a) })
+        var events = []
+        elevations.forEach(function (elevation) {
+            events.push(hillclimber_countries[country_name][elevation])
+        })
+        var challenge = challenge_parkruns(data, {
+            "shortname": "hill-climber-" + country_name,
+            "name": "Hill Climber - " + country_name,
+            "data": events,
+            "help": "Run at the parkrun events with the highest elevation gain in " + country_name
+        })
+        challenge.subparts_detail.forEach(function (subpart_detail) {
+            elevations.forEach(function (elevation) {
+                if (hillclimber_countries[country_name][elevation] === subpart_detail.subpart)
+                    subpart_detail.name = elevation + "m"
+            })
+        })
+        challenge['badge_icon'] = 'runner-hill-climber'
+        challenge_data.push(challenge)
+    })
 }
