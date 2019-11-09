@@ -117,6 +117,7 @@ function generate_running_challenge_data(data) {
       "name": "Gold Level Obsessive",
       "data": 50,
       "help": "Run 50+ parkruns in one calendar year."}))
+    challenge_n_of_a_kind(data, challenge_data)
   }
 
   if (data.parkrun_results && data.geo_data) {
@@ -2130,4 +2131,116 @@ function challenge_by_region(data, params) {
 
     // Return an object representing this challenge
     return update_data_object(o)
+}
+
+function challenge_n_of_a_kind(data, challenge_data)
+{
+    var three_of_a_kinds = []
+    var four_of_a_kinds = []
+    var full_houses = []
+    parkrun_results.forEach(function (parkrun_event, index)
+    {
+        var run_number = index + 1
+        var day_of_month = parkrun_event.date_obj.getDate()
+        var minutes_seconds = -1
+        if (parkrun_event.time.length == 5 && parkrun_event.time.substr(0, 2) == parkrun_event.time.substr(3))
+            minutes_seconds == parkrun_event.time.substr(0, 2)
+        var event_number = parseInt(parkrun_event.event_number)
+        var finish_position = parseInt(parkrun_event.position)
+        var data_array = [ run_number, day_of_month, minutes_seconds, event_number, finish_position ].sort()
+        var num_matches = 0
+        var val_to_match = 0
+        data_array.forEach(function(val)
+        {
+            if (val == val_to_match)
+                num_matches++
+            else
+            {
+                num_matches = 1
+                val_to_match = val
+            }
+            
+            var parkrun_details = {}
+            if (num_matches > 2)
+            {
+                var details = ""
+                if (run_number == val)
+                    details += "Run Number, "
+                if (day_of_month == val)
+                    details += "Day of Month, "
+                if (minutes_seconds == val)
+                    details += "Minutes/Seconds, "
+                if (event_number == val)
+                    details += "Event Number, "
+                if (finish_position == val)
+                    details += "Finish Position, "
+                details = details.substr(0, details.length - 2) + " = " + val
+                parkrun_details.parkrun_event = parkrun_event
+                parkrun_details.details = details
+            }
+            
+            if (num_matches == 3)
+                three_of_a_kinds.push(parkrun_details)
+            else if (num_matches == 4)
+                four_of_a_kinds.push(parkrun_details)
+            else if (num_matches == 5)
+                full_houses.push(parkrun_details)
+        })
+    })
+    
+    var challenges = [
+        { "shortname" : "three-of-a-kind",
+          "name" : "Three of a kind",
+          "achievement" : "3 of the",
+          "parkrun_details" : three_of_a_kinds },
+        { "shortname" : "four-of-a-kind",
+          "name" : "Four of a kind",
+          "achievement" : "4 of the",
+          "parkrun_details" : four_of_a_kinds },
+        { "shortname" : "full-house",
+          "name" : "Full House",
+          "achievement" : "all",
+          "parkrun_details" : full_houses }
+    ]
+    
+    challenges.forEach(function(challenge)
+    {
+        challenge.help = "Finish with the same number for " + challenge.achievement + " 5 - Run Number, Day of Month, Minutes/Seconds, Event Number, Finish Position"
+        var o = create_data_object(challenge, "runner")
+        o.subparts = ["1"]
+        o.summary_text = "0"
+        o.has_map = true
+        if (has_home_parkrun(data) && is_our_page(data))
+          o.home_parkrun = get_home_parkrun(data)
+        
+        if (challenge.parkrun_details.length > 0)
+        {
+            challenge.parkrun_details.forEach(function(parkrun_detail)
+            {
+                o.subparts_detail.push({
+                    "name": parkrun_detail.parkrun_event.name,
+                    "date": parkrun_detail.parkrun_event.date,
+                    "info": parkrun_detail.parkrun_event.date,
+                    "subpart": o.subparts_detail.length + 1 + " - " + parkrun_detail.details
+                })
+                o.completed_qualifying_events[parkrun_detail.parkrun_event.name] = get_parkrun_event_details(data, parkrun_detail.parkrun_event.name)
+            })
+            o.subparts_completed_count = challenge.parkrun_details.length
+            o.complete = true
+            o.completed_on = challenge.parkrun_details[0].date
+        }
+        else
+        {
+            o.subparts_detail.push({
+                "subpart": o.subparts_detail.length + 1,
+                "info": "-"
+            })
+        }
+        
+        // Change the summary to indicate number of times completed
+        if (o.subparts_completed_count > 0)
+            o.summary_text = "x" + o.subparts_completed_count
+        
+        challenge_data.push(update_data_object(o))
+    })
 }
